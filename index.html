@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertisseur de Devises</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #337ea9 0%, #1e4d72 100%);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .converter-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            transition: all 0.3s ease;
+        }
+
+        .converter-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .title {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .currency-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .currency-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .currency-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .currency-input:focus {
+            outline: none;
+            border-color: #337ea9;
+            box-shadow: 0 0 0 3px rgba(51, 126, 169, 0.1);
+        }
+
+        .currency-select {
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 80px;
+        }
+
+        .currency-select:focus {
+            outline: none;
+            border-color: #337ea9;
+            box-shadow: 0 0 0 3px rgba(51, 126, 169, 0.1);
+        }
+
+        .swap-button {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .swap-btn {
+            background: linear-gradient(135deg, #337ea9 0%, #1e4d72 100%);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .swap-btn:hover {
+            transform: rotate(180deg) scale(1.1);
+            box-shadow: 0 5px 15px rgba(51, 126, 169, 0.4);
+        }
+
+        .rate-info {
+            background: linear-gradient(135deg, rgba(51, 126, 169, 0.1) 0%, rgba(51, 126, 169, 0.05) 100%);
+            border: 1px solid rgba(51, 126, 169, 0.2);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            text-align: center;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .rate-value {
+            font-weight: 600;
+            color: #337ea9;
+            margin-top: 5px;
+        }
+
+        .success {
+            color: #337ea9;
+        }
+
+        .fixed-rate {
+            color: #1e4d72;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .last-updated {
+            text-align: center;
+            font-size: 12px;
+            color: rgba(51, 126, 169, 0.8);
+            margin-top: 15px;
+        }
+
+        @media (max-width: 480px) {
+            .converter-container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .currency-select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="converter-container">
+        <h1 class="title">💱 Convertisseur de Devises</h1>
+        
+        <div class="currency-group">
+            <label class="currency-label">De</label>
+            <div class="input-group">
+                <input type="number" id="fromAmount" class="currency-input" placeholder="Montant" value="1" min="0" step="0.01">
+                <select id="fromCurrency" class="currency-select">
+                    <option value="EUR">EUR</option>
+                    <option value="USD">USD</option>
+                    <option value="GBP">GBP</option>
+                    <option value="JPY">JPY</option>
+                    <option value="CAD">CAD</option>
+                    <option value="CHF">CHF</option>
+                    <option value="CNY">CNY</option>
+                    <option value="AUD">AUD</option>
+                    <option value="XPF">XPF</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="swap-button">
+            <button class="swap-btn" id="swapBtn" title="Échanger les devises">⇅</button>
+        </div>
+
+        <div class="currency-group">
+            <label class="currency-label">Vers</label>
+            <div class="input-group">
+                <input type="number" id="toAmount" class="currency-input" placeholder="Résultat" readonly>
+                <select id="toCurrency" class="currency-select">
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="JPY">JPY</option>
+                    <option value="CAD">CAD</option>
+                    <option value="CHF">CHF</option>
+                    <option value="CNY">CNY</option>
+                    <option value="AUD">AUD</option>
+                    <option value="XPF">XPF</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="rate-info" id="rateInfo">
+            <div>Taux de change</div>
+            <div class="rate-value success" id="rateValue">1 EUR = 1.08 USD</div>
+        </div>
+
+        <div class="last-updated" id="lastUpdated">Dernière mise à jour: à l'instant</div>
+    </div>
+
+    <script>
+        class CurrencyConverter {
+            constructor() {
+                // Taux de change de base (mis à jour régulièrement)
+                this.exchangeRates = {
+                    // Base EUR
+                    'EUR': {
+                        'USD': 1.0850,
+                        'GBP': 0.8650,
+                        'JPY': 156.50,
+                        'CAD': 1.4750,
+                        'CHF': 0.9720,
+                        'CNY': 7.8200,
+                        'AUD': 1.6200,
+                        'XPF': 119.331742, // Taux fixe officiel
+                        'EUR': 1.0000
+                    },
+                    // Base USD
+                    'USD': {
+                        'EUR': 0.9217,
+                        'GBP': 0.7972,
+                        'JPY': 144.24,
+                        'CAD': 1.3594,
+                        'CHF': 0.8958,
+                        'CNY': 7.2044,
+                        'AUD': 1.4931,
+                        'XPF': 109.98,
+                        'USD': 1.0000
+                    },
+                    // Base GBP
+                    'GBP': {
+                        'EUR': 1.1561,
+                        'USD': 1.2545,
+                        'JPY': 180.92,
+                        'CAD': 1.7048,
+                        'CHF': 1.1242,
+                        'CNY': 9.0387,
+                        'AUD': 1.8728,
+                        'XPF': 137.95,
+                        'GBP': 1.0000
+                    },
+                    // Base JPY
+                    'JPY': {
+                        'EUR': 0.006389,
+                        'USD': 0.006933,
+                        'GBP': 0.005528,
+                        'CAD': 0.009426,
+                        'CHF': 0.006211,
+                        'CNY': 0.04994,
+                        'AUD': 0.010350,
+                        'XPF': 0.7624,
+                        'JPY': 1.0000
+                    },
+                    // Base CAD
+                    'CAD': {
+                        'EUR': 0.6780,
+                        'USD': 0.7356,
+                        'GBP': 0.5865,
+                        'JPY': 106.10,
+                        'CHF': 0.6587,
+                        'CNY': 5.2976,
+                        'AUD': 1.0983,
+                        'XPF': 80.89,
+                        'CAD': 1.0000
+                    },
+                    // Base CHF
+                    'CHF': {
+                        'EUR': 1.0288,
+                        'USD': 1.1164,
+                        'GBP': 0.8895,
+                        'JPY': 161.01,
+                        'CAD': 1.5176,
+                        'CNY': 8.0453,
+                        'AUD': 1.6667,
+                        'XPF': 122.76,
+                        'CHF': 1.0000
+                    },
+                    // Base CNY
+                    'CNY': {
+                        'EUR': 0.1279,
+                        'USD': 0.1388,
+                        'GBP': 0.1106,
+                        'JPY': 20.02,
+                        'CAD': 0.1888,
+                        'CHF': 0.1243,
+                        'AUD': 0.2072,
+                        'XPF': 15.26,
+                        'CNY': 1.0000
+                    },
+                    // Base AUD
+                    'AUD': {
+                        'EUR': 0.6173,
+                        'USD': 0.6698,
+                        'GBP': 0.5340,
+                        'JPY': 96.60,
+                        'CAD': 0.9105,
+                        'CHF': 0.6000,
+                        'CNY': 4.8264,
+                        'XPF': 73.66,
+                        'AUD': 1.0000
+                    },
+                    // Base XPF
+                    'XPF': {
+                        'EUR': 0.008380, // Taux fixe officiel
+                        'USD': 0.009094,
+                        'GBP': 0.007248,
+                        'JPY': 1.3114,
+                        'CAD': 0.012363,
+                        'CHF': 0.008147,
+                        'CNY': 0.065526,
+                        'AUD': 0.013575,
+                        'XPF': 1.0000
+                    }
+                };
+                
+                this.lastUpdate = new Date();
+                
+                this.fromAmount = document.getElementById('fromAmount');
+                this.fromCurrency = document.getElementById('fromCurrency');
+                this.toAmount = document.getElementById('toAmount');
+                this.toCurrency = document.getElementById('toCurrency');
+                this.swapBtn = document.getElementById('swapBtn');
+                this.rateValue = document.getElementById('rateValue');
+                this.lastUpdated = document.getElementById('lastUpdated');
+                
+                this.init();
+            }
+
+            init() {
+                // Event listeners
+                this.fromAmount.addEventListener('input', () => this.convert());
+                this.fromCurrency.addEventListener('change', () => this.convert());
+                this.toCurrency.addEventListener('change', () => this.convert());
+                this.swapBtn.addEventListener('click', () => this.swapCurrencies());
+                
+                // Initial conversion
+                this.convert();
+                this.updateLastUpdatedText();
+                
+                // Simuler des mises à jour périodiques (sauf pour XPF/EUR qui est fixe)
+                setInterval(() => this.simulateRateUpdates(), 5 * 60 * 1000);
+            }
+
+            convert() {
+                const amount = parseFloat(this.fromAmount.value) || 0;
+                const fromCur = this.fromCurrency.value;
+                const toCur = this.toCurrency.value;
+                
+                if (fromCur === toCur) {
+                    this.toAmount.value = amount.toFixed(2);
+                    this.rateValue.innerHTML = `1 ${fromCur} = 1.0000 ${toCur}`;
+                    return;
+                }
+                
+                const rate = this.exchangeRates[fromCur][toCur];
+                const convertedAmount = amount * rate;
+                
+                this.toAmount.value = convertedAmount.toFixed(2);
+                
+                // Update rate display
+                const displayRate = rate > 1 ? rate.toFixed(4) : rate.toFixed(6);
+                this.rateValue.innerHTML = `1 ${fromCur} = ${displayRate} ${toCur}`;
+                
+                // Add fixed rate indicator for XPF/EUR conversions
+                if ((fromCur === 'XPF' && toCur === 'EUR') || (fromCur === 'EUR' && toCur === 'XPF')) {
+                    this.rateValue.innerHTML += '<span class="fixed-rate">(Taux fixe)</span>';
+                }
+            }
+
+            swapCurrencies() {
+                const fromCur = this.fromCurrency.value;
+                const toCur = this.toCurrency.value;
+                const fromAmount = this.fromAmount.value;
+                const toAmount = this.toAmount.value;
+                
+                this.fromCurrency.value = toCur;
+                this.toCurrency.value = fromCur;
+                this.fromAmount.value = toAmount || fromAmount;
+                
+                this.convert();
+            }
+
+            simulateRateUpdates() {
+                // Simuler de légères variations des taux (sauf XPF/EUR qui reste fixe)
+                Object.keys(this.exchangeRates).forEach(baseCurrency => {
+                    Object.keys(this.exchangeRates[baseCurrency]).forEach(targetCurrency => {
+                        // Ne pas modifier les taux XPF/EUR (fixes)
+                        if ((baseCurrency === 'XPF' && targetCurrency === 'EUR') || 
+                            (baseCurrency === 'EUR' && targetCurrency === 'XPF') ||
+                            baseCurrency === targetCurrency) {
+                            return;
+                        }
+                        
+                        // Variation aléatoire de ±0.5%
+                        const variation = (Math.random() - 0.5) * 0.01;
+                        const currentRate = this.exchangeRates[baseCurrency][targetCurrency];
+                        this.exchangeRates[baseCurrency][targetCurrency] = currentRate * (1 + variation);
+                    });
+                });
+                
+                this.lastUpdate = new Date();
+                this.convert();
+                this.updateLastUpdatedText();
+            }
+
+            updateLastUpdatedText() {
+                const now = new Date();
+                const diff = Math.floor((now - this.lastUpdate) / (1000 * 60));
+                
+                let timeText;
+                if (diff < 1) {
+                    timeText = "à l'instant";
+                } else if (diff < 60) {
+                    timeText = `il y a ${diff} min`;
+                } else {
+                    const hours = Math.floor(diff / 60);
+                    timeText = `il y a ${hours}h`;
+                }
+                
+                this.lastUpdated.textContent = `Dernière mise à jour: ${timeText}`;
+            }
+        }
+
+        // Initialize the converter when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CurrencyConverter();
+        });
+
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', () => {
+            // Animate inputs on focus
+            const inputs = document.querySelectorAll('.currency-input, .currency-select');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.style.transform = 'scale(1.02)';
+                });
+                
+                input.addEventListener('blur', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
