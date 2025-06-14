@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Convertisseur de Devises</title>
+    <title>Convertisseur de Devises - Temps Réel</title>
     <style>
         * {
             margin: 0;
@@ -140,6 +140,15 @@
             margin-top: 5px;
         }
 
+        .loading {
+            color: #337ea9;
+            font-style: italic;
+        }
+
+        .error {
+            color: #d32f2f;
+        }
+
         .success {
             color: #337ea9;
         }
@@ -155,6 +164,20 @@
             font-size: 12px;
             color: rgba(51, 126, 169, 0.8);
             margin-top: 15px;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: none;
+            color: #337ea9;
+            cursor: pointer;
+            font-size: 12px;
+            text-decoration: underline;
+            margin-left: 5px;
+        }
+
+        .refresh-btn:hover {
+            color: #1e4d72;
         }
 
         @media (max-width: 480px) {
@@ -219,153 +242,171 @@
 
         <div class="rate-info" id="rateInfo">
             <div>Taux de change</div>
-            <div class="rate-value success" id="rateValue">1 EUR = 1.08 USD</div>
+            <div class="rate-value loading" id="rateValue">Chargement...</div>
         </div>
 
-        <div class="last-updated" id="lastUpdated">Dernière mise à jour: à l'instant</div>
+        <div class="last-updated" id="lastUpdated">
+            <span id="lastUpdatedText">Chargement des taux...</span>
+            <button class="refresh-btn" id="refreshBtn">Actualiser</button>
+        </div>
     </div>
 
     <script>
         class CurrencyConverter {
             constructor() {
-                // Taux de change de base (mis à jour régulièrement)
-                this.exchangeRates = {
-                    // Base EUR
-                    'EUR': {
-                        'USD': 1.0850,
-                        'GBP': 0.8650,
-                        'JPY': 156.50,
-                        'CAD': 1.4750,
-                        'CHF': 0.9720,
-                        'CNY': 7.8200,
-                        'AUD': 1.6200,
-                        'XPF': 119.331742, // Taux fixe officiel
-                        'EUR': 1.0000
-                    },
-                    // Base USD
-                    'USD': {
-                        'EUR': 0.9217,
-                        'GBP': 0.7972,
-                        'JPY': 144.24,
-                        'CAD': 1.3594,
-                        'CHF': 0.8958,
-                        'CNY': 7.2044,
-                        'AUD': 1.4931,
-                        'XPF': 109.98,
-                        'USD': 1.0000
-                    },
-                    // Base GBP
-                    'GBP': {
-                        'EUR': 1.1561,
-                        'USD': 1.2545,
-                        'JPY': 180.92,
-                        'CAD': 1.7048,
-                        'CHF': 1.1242,
-                        'CNY': 9.0387,
-                        'AUD': 1.8728,
-                        'XPF': 137.95,
-                        'GBP': 1.0000
-                    },
-                    // Base JPY
-                    'JPY': {
-                        'EUR': 0.006389,
-                        'USD': 0.006933,
-                        'GBP': 0.005528,
-                        'CAD': 0.009426,
-                        'CHF': 0.006211,
-                        'CNY': 0.04994,
-                        'AUD': 0.010350,
-                        'XPF': 0.7624,
-                        'JPY': 1.0000
-                    },
-                    // Base CAD
-                    'CAD': {
-                        'EUR': 0.6780,
-                        'USD': 0.7356,
-                        'GBP': 0.5865,
-                        'JPY': 106.10,
-                        'CHF': 0.6587,
-                        'CNY': 5.2976,
-                        'AUD': 1.0983,
-                        'XPF': 80.89,
-                        'CAD': 1.0000
-                    },
-                    // Base CHF
-                    'CHF': {
-                        'EUR': 1.0288,
-                        'USD': 1.1164,
-                        'GBP': 0.8895,
-                        'JPY': 161.01,
-                        'CAD': 1.5176,
-                        'CNY': 8.0453,
-                        'AUD': 1.6667,
-                        'XPF': 122.76,
-                        'CHF': 1.0000
-                    },
-                    // Base CNY
-                    'CNY': {
-                        'EUR': 0.1279,
-                        'USD': 0.1388,
-                        'GBP': 0.1106,
-                        'JPY': 20.02,
-                        'CAD': 0.1888,
-                        'CHF': 0.1243,
-                        'AUD': 0.2072,
-                        'XPF': 15.26,
-                        'CNY': 1.0000
-                    },
-                    // Base AUD
-                    'AUD': {
-                        'EUR': 0.6173,
-                        'USD': 0.6698,
-                        'GBP': 0.5340,
-                        'JPY': 96.60,
-                        'CAD': 0.9105,
-                        'CHF': 0.6000,
-                        'CNY': 4.8264,
-                        'XPF': 73.66,
-                        'AUD': 1.0000
-                    },
-                    // Base XPF
-                    'XPF': {
-                        'EUR': 0.008380, // Taux fixe officiel
-                        'USD': 0.009094,
-                        'GBP': 0.007248,
-                        'JPY': 1.3114,
-                        'CAD': 0.012363,
-                        'CHF': 0.008147,
-                        'CNY': 0.065526,
-                        'AUD': 0.013575,
-                        'XPF': 1.0000
-                    }
-                };
+                // API gratuite qui ne nécessite pas de clé
+                this.apiUrl = 'https://api.exchangerate-api.com/v4/latest/';
                 
-                this.lastUpdate = new Date();
+                // Taux fixe XPF/EUR
+                this.FIXED_XPF_EUR_RATE = 119.331742;
                 
+                // Cache des taux
+                this.exchangeRates = {};
+                this.lastUpdate = null;
+                
+                // Elements DOM
                 this.fromAmount = document.getElementById('fromAmount');
                 this.fromCurrency = document.getElementById('fromCurrency');
                 this.toAmount = document.getElementById('toAmount');
                 this.toCurrency = document.getElementById('toCurrency');
                 this.swapBtn = document.getElementById('swapBtn');
                 this.rateValue = document.getElementById('rateValue');
-                this.lastUpdated = document.getElementById('lastUpdated');
+                this.lastUpdatedText = document.getElementById('lastUpdatedText');
+                this.refreshBtn = document.getElementById('refreshBtn');
                 
                 this.init();
             }
 
-            init() {
+            async init() {
                 // Event listeners
                 this.fromAmount.addEventListener('input', () => this.convert());
                 this.fromCurrency.addEventListener('change', () => this.convert());
                 this.toCurrency.addEventListener('change', () => this.convert());
                 this.swapBtn.addEventListener('click', () => this.swapCurrencies());
+                this.refreshBtn.addEventListener('click', () => this.fetchExchangeRates());
                 
-                // Initial conversion
+                // Charger les taux initiaux
+                await this.fetchExchangeRates();
+                
+                // Actualiser automatiquement toutes les 30 minutes
+                setInterval(() => this.fetchExchangeRates(), 30 * 60 * 1000);
+            }
+
+            async fetchExchangeRates() {
+                this.rateValue.innerHTML = '<span class="loading">Chargement des taux...</span>';
+                
+                try {
+                    // Récupérer les taux pour EUR
+                    const responseEUR = await fetch(this.apiUrl + 'EUR');
+                    const dataEUR = await responseEUR.json();
+                    
+                    // Récupérer les taux pour USD
+                    const responseUSD = await fetch(this.apiUrl + 'USD');
+                    const dataUSD = await responseUSD.json();
+                    
+                    // Construire la matrice des taux
+                    this.exchangeRates = this.buildRatesMatrix(dataEUR, dataUSD);
+                    
+                    // Ajouter les taux XPF
+                    this.addXPFRates();
+                    
+                    this.lastUpdate = new Date();
+                    this.convert();
+                    this.updateLastUpdatedText();
+                    
+                } catch (error) {
+                    console.error('Erreur lors de la récupération des taux:', error);
+                    this.rateValue.innerHTML = '<span class="error">Erreur de chargement</span>';
+                    
+                    // Utiliser des taux de secours
+                    this.useBackupRates();
+                }
+            }
+
+            buildRatesMatrix(dataEUR, dataUSD) {
+                const rates = {};
+                const currencies = ['EUR', 'USD', 'GBP', 'JPY', 'CAD', 'CHF', 'CNY', 'AUD'];
+                
+                // Construire la matrice complète des taux
+                currencies.forEach(baseCurrency => {
+                    rates[baseCurrency] = {};
+                    
+                    currencies.forEach(targetCurrency => {
+                        if (baseCurrency === targetCurrency) {
+                            rates[baseCurrency][targetCurrency] = 1;
+                        } else if (baseCurrency === 'EUR') {
+                            rates[baseCurrency][targetCurrency] = dataEUR.rates[targetCurrency];
+                        } else if (baseCurrency === 'USD') {
+                            rates[baseCurrency][targetCurrency] = dataUSD.rates[targetCurrency];
+                        } else {
+                            // Calculer le taux croisé via EUR
+                            const baseToEUR = 1 / dataEUR.rates[baseCurrency];
+                            const EURToTarget = dataEUR.rates[targetCurrency];
+                            rates[baseCurrency][targetCurrency] = baseToEUR * EURToTarget;
+                        }
+                    });
+                });
+                
+                return rates;
+            }
+
+            addXPFRates() {
+                // Ajouter XPF à toutes les devises
+                const currencies = Object.keys(this.exchangeRates);
+                
+                // Taux XPF basés sur EUR
+                this.exchangeRates.XPF = {};
+                currencies.forEach(currency => {
+                    if (currency === 'EUR') {
+                        this.exchangeRates.XPF.EUR = 1 / this.FIXED_XPF_EUR_RATE;
+                    } else {
+                        this.exchangeRates.XPF[currency] = this.exchangeRates.EUR[currency] / this.FIXED_XPF_EUR_RATE;
+                    }
+                });
+                
+                // Ajouter XPF comme devise cible
+                currencies.forEach(currency => {
+                    if (currency === 'EUR') {
+                        this.exchangeRates[currency].XPF = this.FIXED_XPF_EUR_RATE;
+                    } else {
+                        this.exchangeRates[currency].XPF = this.exchangeRates[currency].EUR * this.FIXED_XPF_EUR_RATE;
+                    }
+                });
+                
+                this.exchangeRates.XPF.XPF = 1;
+            }
+
+            useBackupRates() {
+                // Taux de secours en cas d'échec de l'API
+                this.exchangeRates = {
+                    'EUR': {
+                        'EUR': 1, 'USD': 1.08, 'GBP': 0.86, 'JPY': 156.5,
+                        'CAD': 1.47, 'CHF': 0.97, 'CNY': 7.82, 'AUD': 1.62,
+                        'XPF': 119.331742
+                    },
+                    'USD': {
+                        'EUR': 0.92, 'USD': 1, 'GBP': 0.79, 'JPY': 144.5,
+                        'CAD': 1.36, 'CHF': 0.89, 'CNY': 7.22, 'AUD': 1.50,
+                        'XPF': 110.31
+                    }
+                };
+                
+                // Compléter avec les autres devises
+                const baseCurrencies = ['GBP', 'JPY', 'CAD', 'CHF', 'CNY', 'AUD', 'XPF'];
+                baseCurrencies.forEach(base => {
+                    if (!this.exchangeRates[base]) {
+                        this.exchangeRates[base] = {};
+                        Object.keys(this.exchangeRates.EUR).forEach(target => {
+                            const eurToBase = this.exchangeRates.EUR[base];
+                            const eurToTarget = this.exchangeRates.EUR[target];
+                            this.exchangeRates[base][target] = eurToTarget / eurToBase;
+                        });
+                    }
+                });
+                
+                this.lastUpdate = new Date();
                 this.convert();
                 this.updateLastUpdatedText();
-                
-                // Simuler des mises à jour périodiques (sauf pour XPF/EUR qui est fixe)
-                setInterval(() => this.simulateRateUpdates(), 5 * 60 * 1000);
             }
 
             convert() {
@@ -373,9 +414,15 @@
                 const fromCur = this.fromCurrency.value;
                 const toCur = this.toCurrency.value;
                 
+                if (!this.exchangeRates[fromCur] || !this.exchangeRates[fromCur][toCur]) {
+                    this.toAmount.value = '';
+                    this.rateValue.innerHTML = '<span class="error">Taux non disponible</span>';
+                    return;
+                }
+                
                 if (fromCur === toCur) {
                     this.toAmount.value = amount.toFixed(2);
-                    this.rateValue.innerHTML = `1 ${fromCur} = 1.0000 ${toCur}`;
+                    this.rateValue.innerHTML = `<span class="success">1 ${fromCur} = 1.0000 ${toCur}</span>`;
                     return;
                 }
                 
@@ -384,11 +431,11 @@
                 
                 this.toAmount.value = convertedAmount.toFixed(2);
                 
-                // Update rate display
+                // Afficher le taux
                 const displayRate = rate > 1 ? rate.toFixed(4) : rate.toFixed(6);
-                this.rateValue.innerHTML = `1 ${fromCur} = ${displayRate} ${toCur}`;
+                this.rateValue.innerHTML = `<span class="success">1 ${fromCur} = ${displayRate} ${toCur}</span>`;
                 
-                // Add fixed rate indicator for XPF/EUR conversions
+                // Indicateur de taux fixe pour XPF/EUR
                 if ((fromCur === 'XPF' && toCur === 'EUR') || (fromCur === 'EUR' && toCur === 'XPF')) {
                     this.rateValue.innerHTML += '<span class="fixed-rate">(Taux fixe)</span>';
                 }
@@ -407,55 +454,37 @@
                 this.convert();
             }
 
-            simulateRateUpdates() {
-                // Simuler de légères variations des taux (sauf XPF/EUR qui reste fixe)
-                Object.keys(this.exchangeRates).forEach(baseCurrency => {
-                    Object.keys(this.exchangeRates[baseCurrency]).forEach(targetCurrency => {
-                        // Ne pas modifier les taux XPF/EUR (fixes)
-                        if ((baseCurrency === 'XPF' && targetCurrency === 'EUR') || 
-                            (baseCurrency === 'EUR' && targetCurrency === 'XPF') ||
-                            baseCurrency === targetCurrency) {
-                            return;
-                        }
-                        
-                        // Variation aléatoire de ±0.5%
-                        const variation = (Math.random() - 0.5) * 0.01;
-                        const currentRate = this.exchangeRates[baseCurrency][targetCurrency];
-                        this.exchangeRates[baseCurrency][targetCurrency] = currentRate * (1 + variation);
-                    });
-                });
-                
-                this.lastUpdate = new Date();
-                this.convert();
-                this.updateLastUpdatedText();
-            }
-
             updateLastUpdatedText() {
+                if (!this.lastUpdate) {
+                    this.lastUpdatedText.textContent = 'Aucune donnée';
+                    return;
+                }
+                
                 const now = new Date();
-                const diff = Math.floor((now - this.lastUpdate) / (1000 * 60));
+                const diff = Math.floor((now - this.lastUpdate) / 1000);
                 
                 let timeText;
-                if (diff < 1) {
+                if (diff < 60) {
                     timeText = "à l'instant";
-                } else if (diff < 60) {
-                    timeText = `il y a ${diff} min`;
+                } else if (diff < 3600) {
+                    const minutes = Math.floor(diff / 60);
+                    timeText = `il y a ${minutes} min`;
                 } else {
-                    const hours = Math.floor(diff / 60);
+                    const hours = Math.floor(diff / 3600);
                     timeText = `il y a ${hours}h`;
                 }
                 
-                this.lastUpdated.textContent = `Dernière mise à jour: ${timeText}`;
+                this.lastUpdatedText.textContent = `Dernière mise à jour: ${timeText}`;
             }
         }
 
-        // Initialize the converter when page loads
+        // Initialiser le convertisseur
         document.addEventListener('DOMContentLoaded', () => {
             new CurrencyConverter();
         });
 
-        // Add some interactive effects
+        // Effets interactifs
         document.addEventListener('DOMContentLoaded', () => {
-            // Animate inputs on focus
             const inputs = document.querySelectorAll('.currency-input, .currency-select');
             inputs.forEach(input => {
                 input.addEventListener('focus', function() {
